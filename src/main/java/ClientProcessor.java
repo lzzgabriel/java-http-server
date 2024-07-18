@@ -4,6 +4,7 @@ import java.io.InputStreamReader;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -84,7 +85,7 @@ public class ClientProcessor implements Runnable {
         }
 
         // Compressing
-        if (CompressionScheme.isSupported(headers.get("Accept-Encoding"))) {
+        if (Arrays.stream(headers.get("Accept-Encoding").split(", ")).anyMatch(CompressionScheme::isSupported)) {
             responseHeader += "Content-Encoding: " + headers.get("Accept-Encoding").trim().toLowerCase() + "\r\n";
         }
 
