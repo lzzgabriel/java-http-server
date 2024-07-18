@@ -1,3 +1,5 @@
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class FileManager {
@@ -22,6 +24,13 @@ public class FileManager {
 
     public Path getFile(String fileName) {
         return baseDir.resolve(fileName);
+    }
+
+    public Path overwriteFile(String fileName) throws IOException {
+        var file = baseDir.resolve(fileName);
+        Files.deleteIfExists(file);
+        Files.createDirectories(baseDir);
+        return Files.createFile(file);
     }
 
 }

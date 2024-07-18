@@ -30,12 +30,13 @@ public class ClientProcessor implements Runnable {
             client.getOutputStream().write(response);
             client.close();
         } catch (IOException e) {
-            logger.severe(e.getMessage());
+            logger.severe(e.toString());
         }
     }
 
     private static byte[] parseRequest(Socket clientSocket) throws IOException {
-        var reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        var isr = new InputStreamReader(clientSocket.getInputStream());
+        var reader = new BufferedReader(isr);
 
         // request line
         String[] requestLine = reader.readLine().split(" ");
@@ -51,7 +52,7 @@ public class ClientProcessor implements Runnable {
             headers.put(arr[0], arr[1]);
         }
 
-        String response;
+        String response = "";
         byte[] nonStringBody = new byte[0];
         Matcher matcher;
 
@@ -65,12 +66,25 @@ public class ClientProcessor implements Runnable {
             response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + res.length() + "\r\n\r\n" + res;
         } else if ((matcher = Pattern.compile("/files/(\\w+)").matcher(target)).matches()) {
             String fileName = matcher.group(1);
-            Path file = FileManager.getInstance().getFile(fileName);
-            if (!file.toFile().exists()) {
-                response = "HTTP/1.1 404 Not Found\r\n\r\n";
-            } else {
-                response = "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: " + file.toFile().length() + "\r\n\r\n";
-                nonStringBody = Files.readAllBytes(file);
+            if (method.equals("GET")) {
+                Path file = FileManager.getInstance().getFile(fileName);
+                if (!file.toFile().exists()) {
+                    response = "HTTP/1.1 404 Not Found\r\n\r\n";
+                } else {
+                    response = "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: " + file.toFile().length() + "\r\n\r\n";
+                    nonStringBody = Files.readAllBytes(file);
+                }
+            } else if (method.equals("POST")) {
+
+                // read request body
+                char[] body = new char[Integer.parseInt(headers.get("Content-Length"))];
+                reader.read(body);
+
+                Path file = FileManager.getInstance().overwriteFile(fileName);
+                if (Files.exists(file)) {
+                    Files.writeString(file, new String(body));
+                    response = "HTTP/1.1 201 Created\r\n\r\n";
+                }
             }
         } else {
             response = "HTTP/1.1 404 Not Found\r\n\r\n";
