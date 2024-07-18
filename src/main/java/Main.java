@@ -5,6 +5,9 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -15,23 +18,47 @@ public class Main {
 
         // Uncomment this block to pass the first stage
 
-        ServerSocket serverSocket;
         Socket clientSocket;
 
-        try {
-            serverSocket = new ServerSocket(4221);
+        try(ExecutorService es = Executors.newFixedThreadPool(8);
+            ServerSocket serverSocket = new ServerSocket(4221)) {
             // Since the tester restarts your program quite often, setting SO_REUSEADDR
             // ensures that we don't run into 'Address already in use' errors
             serverSocket.setReuseAddress(true);
-            clientSocket = serverSocket.accept(); // Wait for connection from client.
-            System.out.println("accepted new connection");
 
-            String response = parseRequest(clientSocket);
+            while (true) {
+                clientSocket = serverSocket.accept(); // Wait for connection from client.
 
-            clientSocket.getOutputStream().write(response.getBytes());
-            clientSocket.close();
+                es.submit(new ClientProcessor(clientSocket));
+            }
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage());
+        }
+    }
+
+}
+
+class ClientProcessor implements Runnable {
+
+    private final Logger logger = Logger.getLogger(getClass().getName());
+
+    private final Socket client;
+
+    public ClientProcessor(Socket client) {
+        this.client = client;
+    }
+
+    @Override
+    public void run() {
+        System.out.println("accepted new connection");
+
+        try {
+            String response = parseRequest(client);
+
+            client.getOutputStream().write(response.getBytes());
+            client.close();
+        } catch (IOException e) {
+            logger.severe(e.getMessage());
         }
     }
 
@@ -68,5 +95,4 @@ public class Main {
         }
         return response;
     }
-
 }
