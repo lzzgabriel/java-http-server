@@ -48,7 +48,7 @@ public class Main {
         Map<String, String> headers = new HashMap<>();
         String header;
         while ((header = reader.readLine()) != null && !header.isBlank()) {
-            var arr = header.split(" ");
+            var arr = header.split(": ");
             headers.put(arr[0], arr[1]);
         }
 
@@ -59,6 +59,9 @@ public class Main {
             response = "HTTP/1.1 200 OK\r\n\r\n";
         } else if ((matcher = Pattern.compile("/echo/(\\w*)").matcher(target)).matches()) {
             String res = matcher.group(1);
+            response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + res.length() + "\r\n\r\n" + res;
+        } else if (target.equals("/user-agent")) {
+            String res = headers.get("User-Agent");
             response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + res.length() + "\r\n\r\n" + res;
         } else {
             response = "HTTP/1.1 404 Not Found\r\n\r\n";
