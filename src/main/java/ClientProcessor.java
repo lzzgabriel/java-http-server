@@ -84,8 +84,8 @@ public class ClientProcessor implements Runnable {
         }
 
         // Compressing
-        if (CompressionScheme.isSupported(headers.get("Content-Encoding"))) {
-            responseHeader += "Content-Encoding: " + headers.get("Content-Encoding").trim().toLowerCase() + "\r\n";
+        if (CompressionScheme.isSupported(headers.get("Accept-Encoding"))) {
+            responseHeader += "Content-Encoding: " + headers.get("Accept-Encoding").trim().toLowerCase() + "\r\n";
         }
 
         if (responseBody.length > 0) {
