@@ -7,7 +7,7 @@ public class FileManager {
     private final Path baseDir;
 
     private FileManager(String baseDir) {
-        this.baseDir = Path.of(".", baseDir);
+        this.baseDir = Path.of(baseDir);
     }
 
     public static void initialize(String baseDir) {
