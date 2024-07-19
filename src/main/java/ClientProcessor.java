@@ -88,7 +88,7 @@ public class ClientProcessor implements Runnable {
         Arrays.stream(headers.get("Accept-Encoding").split(", "))
                 .filter(CompressionScheme::isSupported)
                 .findAny()
-                .ifPresent(encoding -> responseHeader.append("Content-Encoding: ").append(headers.get("Accept-Encoding").trim().toLowerCase()).append("\r\n"));
+                .ifPresent(encoding -> responseHeader.append("Content-Encoding: ").append(encoding.trim().toLowerCase()).append("\r\n"));
 
         if (responseBody.length > 0) {
             responseHeader.append("Content-Length: ").append(responseBody.length).append("\r\n");
