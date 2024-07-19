@@ -1,4 +1,5 @@
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
@@ -35,8 +36,14 @@ public class ClientProcessor implements Runnable {
     }
 
     private static byte[] parseRequest(Socket clientSocket) throws IOException {
-        var isr = new InputStreamReader(clientSocket.getInputStream());
-        var reader = new BufferedReader(isr);
+        var is = clientSocket.getInputStream();
+
+        int bytesExpected = is.available();
+        byte[] request = new byte[bytesExpected];
+        int readCount = is.read(request);
+
+        var bais = new ByteArrayInputStream(request);
+        var reader = new BufferedReader(new InputStreamReader(bais));
 
         // request line
         String[] requestLine = reader.readLine().split(" ");
@@ -71,8 +78,8 @@ public class ClientProcessor implements Runnable {
                 }
             } else if (method.equals("POST")) {
                 // read request body
-                char[] body = new char[Integer.parseInt(headers.get("Content-Length"))];
-                reader.read(body);
+                byte[] body = new byte[Integer.parseInt(headers.get("Content-Length"))];
+                System.arraycopy(request, request.length - body.length, body, 0, body.length);
 
                 Path file = FileManager.getInstance().overwriteFile(fileName);
                 if (Files.exists(file)) {
@@ -85,10 +92,12 @@ public class ClientProcessor implements Runnable {
         }
 
         // Compressing
-        Arrays.stream(headers.get("Accept-Encoding").split(", "))
-                .filter(CompressionScheme::isSupported)
-                .findAny()
-                .ifPresent(encoding -> responseHeader.append("Content-Encoding: ").append(encoding.trim().toLowerCase()).append("\r\n"));
+        if (headers.containsKey("Accept-Encoding")) {
+            Arrays.stream(headers.get("Accept-Encoding").split(", "))
+                    .filter(CompressionScheme::isSupported)
+                    .findAny()
+                    .ifPresent(encoding -> responseHeader.append("Content-Encoding: ").append(encoding.trim().toLowerCase()).append("\r\n"));
+        }
 
         if (responseBody.length > 0) {
             responseHeader.append("Content-Length: ").append(responseBody.length).append("\r\n");
