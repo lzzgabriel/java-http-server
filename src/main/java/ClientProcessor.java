@@ -26,17 +26,27 @@ public class ClientProcessor implements Runnable {
         System.out.println("accepted new connection");
 
         try {
-            byte[] response = parseRequest(client);
+            byte[] response = parseRequest();
 
             client.getOutputStream().write(response);
-            client.close();
+            client.shutdownOutput();
         } catch (IOException e) {
             logger.severe(e.toString());
+        } finally {
+            closeConnection();
         }
     }
 
-    private static byte[] parseRequest(Socket clientSocket) throws IOException {
-        var is = clientSocket.getInputStream();
+    private byte[] parseRequest() throws IOException {
+        while (client.getInputStream().available() <= 0) {
+            try {
+                Thread.sleep(0, 200);
+            } catch (InterruptedException e) {
+                logger.severe(e.toString());
+            }
+        }
+
+        var is = client.getInputStream();
 
         int bytesExpected = is.available();
         byte[] request = new byte[bytesExpected];
@@ -121,6 +131,14 @@ public class ClientProcessor implements Runnable {
             headers.put(arr[0], arr[1]);
         }
         return headers;
+    }
+
+    private void closeConnection() {
+        try {
+            client.close();
+        } catch (IOException e) {
+            logger.severe(e.toString());
+        }
     }
 
 }

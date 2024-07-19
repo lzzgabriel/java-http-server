@@ -3,6 +3,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 public class Main {
     public static void main(String[] args) {
@@ -15,13 +16,13 @@ public class Main {
         }
         Socket clientSocket;
 
-        try(ExecutorService es = Executors.newFixedThreadPool(8);
+        try(ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(8);
             ServerSocket serverSocket = new ServerSocket(4221)) {
             serverSocket.setReuseAddress(true);
 
             while (true) {
                 clientSocket = serverSocket.accept(); // Wait for connection from client.
-                es.submit(new ClientProcessor(clientSocket));
+                executor.execute(new ClientProcessor(clientSocket));
             }
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage());
