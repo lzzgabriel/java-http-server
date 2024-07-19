@@ -47,27 +47,27 @@ public class ClientProcessor implements Runnable {
         // headers
         Map<String, String> headers = parseHeaders(reader);
 
-        String responseHeader = "";
+        final StringBuilder responseHeader = new StringBuilder();
         byte[] responseBody = new byte[0];
         Matcher matcher;
 
         if (target.equals("/")) {
-            responseHeader = "HTTP/1.1 200 OK\r\n";
+            responseHeader.append("HTTP/1.1 200 OK\r\n");
         } else if ((matcher = Pattern.compile("/echo/(\\w*)").matcher(target)).matches()) {
             responseBody = matcher.group(1).getBytes();
-            responseHeader = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
+            responseHeader.append("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n");
         } else if (target.equals("/user-agent")) {
             responseBody = headers.get("User-Agent").getBytes();
-            responseHeader = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
+            responseHeader.append("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n");
         } else if ((matcher = Pattern.compile("/files/(\\w+)").matcher(target)).matches()) {
             String fileName = matcher.group(1);
             if (method.equals("GET")) {
                 Path file = FileManager.getInstance().getFile(fileName);
                 if (!file.toFile().exists()) {
-                    responseHeader = "HTTP/1.1 404 Not Found\r\n";
+                    responseHeader.append("HTTP/1.1 404 Not Found\r\n");
                 } else {
                     responseBody = Files.readAllBytes(file);
-                    responseHeader = "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\n";
+                    responseHeader.append("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\n");
                 }
             } else if (method.equals("POST")) {
                 // read request body
@@ -77,30 +77,31 @@ public class ClientProcessor implements Runnable {
                 Path file = FileManager.getInstance().overwriteFile(fileName);
                 if (Files.exists(file)) {
                     Files.writeString(file, new String(body));
-                    responseHeader = "HTTP/1.1 201 Created\r\n";
+                    responseHeader.append("HTTP/1.1 201 Created\r\n");
                 }
             }
         } else {
-            responseHeader = "HTTP/1.1 404 Not Found\r\n";
+            responseHeader.append("HTTP/1.1 404 Not Found\r\n");
         }
 
         // Compressing
-        if (Arrays.stream(headers.get("Accept-Encoding").split(", ")).anyMatch(CompressionScheme::isSupported)) {
-            responseHeader += "Content-Encoding: " + headers.get("Accept-Encoding").trim().toLowerCase() + "\r\n";
-        }
+        Arrays.stream(headers.get("Accept-Encoding").split(", "))
+                .filter(CompressionScheme::isSupported)
+                .findAny()
+                .ifPresent(encoding -> responseHeader.append("Content-Encoding: ").append(headers.get("Accept-Encoding").trim().toLowerCase()).append("\r\n"));
 
         if (responseBody.length > 0) {
-            responseHeader += "Content-Length: " + responseBody.length + "\r\n";
+            responseHeader.append("Content-Length: ").append(responseBody.length).append("\r\n");
         }
 
-        responseHeader += "\r\n";
+        responseHeader.append("\r\n");
 
-        byte[] responseBytes = responseHeader.getBytes();
-        byte[] toReturn = new byte[responseBytes.length + responseBody.length];
-        System.arraycopy(responseBytes, 0, toReturn, 0, responseBytes.length);
-        System.arraycopy(responseBody, 0, toReturn, responseBytes.length, responseBody.length);
+        byte[] headerBytes = responseHeader.toString().getBytes();
+        byte[] response = new byte[headerBytes.length + responseBody.length];
+        System.arraycopy(headerBytes, 0, response, 0, headerBytes.length);
+        System.arraycopy(responseBody, 0, response, headerBytes.length, responseBody.length);
 
-        return toReturn;
+        return response;
     }
 
     private static Map<String, String> parseHeaders(BufferedReader reader) throws IOException {
@@ -112,4 +113,5 @@ public class ClientProcessor implements Runnable {
         }
         return headers;
     }
+
 }
