@@ -1,3 +1,5 @@
+package demo.http.server.java;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,7 +20,7 @@ public class FileManager {
 
     public static FileManager getInstance() {
         if (instance == null)
-            throw new IllegalStateException("FileManager not initialized");
+            throw new IllegalStateException("demo.http.server.java.FileManager not initialized");
         return instance;
     }
 

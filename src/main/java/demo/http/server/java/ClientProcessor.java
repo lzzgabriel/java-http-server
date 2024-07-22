@@ -1,7 +1,9 @@
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+package demo.http.server.java;
+
+import demo.http.server.java.compression.Compression;
+import demo.http.server.java.compression.CompressionScheme;
+
+import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,6 +13,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.GZIPOutputStream;
 
 public class ClientProcessor implements Runnable {
 
@@ -103,10 +106,24 @@ public class ClientProcessor implements Runnable {
 
         // Compressing
         if (headers.containsKey("Accept-Encoding")) {
+            final var responseBodyWrapper = new ByteArrayWrapper(responseBody);
             Arrays.stream(headers.get("Accept-Encoding").split(", "))
                     .filter(CompressionScheme::isSupported)
                     .findAny()
-                    .ifPresent(encoding -> responseHeader.append("Content-Encoding: ").append(encoding.trim().toLowerCase()).append("\r\n"));
+                    .ifPresent(encoding -> {
+                        responseHeader.append("Content-Encoding: ").append(encoding.trim().toLowerCase()).append("\r\n");
+                        try {
+                            var comp = Compression.getCompressionScheme(CompressionScheme.valueOf(encoding.toUpperCase()))
+                                    .compress(responseBodyWrapper.getInternal());
+                            responseBodyWrapper.setInternal(comp);
+                            responseBodyWrapper.markCompleted();
+                        } catch (IOException e) {
+                            logger.severe(e.toString());
+                        }
+                    });
+            if (responseBodyWrapper.isCompleted()) {
+                responseBody = responseBodyWrapper.getInternal();
+            }
         }
 
         if (responseBody.length > 0) {

@@ -1,3 +1,5 @@
+package demo.http.server.java.compression;
+
 public enum CompressionScheme {
 
     GZIP;
