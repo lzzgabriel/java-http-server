@@ -9,7 +9,7 @@ public interface Compression {
 
     static Compression getCompressionScheme(CompressionScheme scheme) {
         try {
-            var clazz = Class.forName("demo.http.server.java.compression.impl" + scheme.name() + "CompressionScheme");
+            var clazz = Class.forName("demo.http.server.java.compression.impl." + scheme.name() + "CompressionScheme");
             return (Compression) clazz.getDeclaredConstructor().newInstance();
         } catch (ClassNotFoundException | InvocationTargetException | InstantiationException | NoSuchMethodException |
                  IllegalAccessException e) {
